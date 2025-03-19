@@ -1,5 +1,7 @@
 "use client"
 import { assets } from "@/assets/assets";
+import Message from "@/components/Message";
+import PromptBox from "@/components/PromptBox";
 import Sidebar from "@/components/Sidebar";
 import Image from "next/image";
 import { useState } from "react";
@@ -12,7 +14,7 @@ export default function Home() {
   return (
     <div>
       <div className="flex h-screen">
-        <Sidebar expand={expand} setExpand={setExpand}/>
+        <Sidebar expand={expand} setExpand={setExpand} />
         <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8 bg-[#292a2d] text-white relative">
 
           <div className="md:hidden absolute px-4 top-6 flex items-center justify-between w-full">
@@ -20,20 +22,20 @@ export default function Home() {
             <Image alt="" className="opacity-70" src={assets.chat_icon} />
           </div>
 
-          {message.length === 0 ? (
+          {message.length == 0 ? (
             <>
-              <div>
+              <div className="flex items-center gap-3">
                 <Image alt="" src={assets.logo_icon} className="h-16" />
-                <p className="text-2xl font-medium">Hi, I'm DeepSeek</p>
+                <p className="text-2xl font-medium">Hi, I'm DeepSeek Clone</p>
               </div>
               <p className="text-sm mt-2">How can I help you today ?</p>
             </>
           ) : (
             <div>
-
+              <Message role="user" content="Hello buddy" />
             </div>
           )}
-          {/* prompt box */}
+          <PromptBox isLoading={isLoading} setIsLoading={setIsLoading} />
           <p className="text-xs absolute bottom-1 text-gray-500">AI-generated, for reference only</p>
         </div>
       </div>
