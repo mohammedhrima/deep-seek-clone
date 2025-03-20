@@ -58,18 +58,19 @@ export async function POST(req) {
         message: "User not authenticated",
       });
     }
-    if (!prompt || !chatId) {
+    /*if (!prompt || !chatId) {
       return NextResponse.json({
         success: false,
         message: "Prompt and chatId are required",
       });
-    }
+    }*/
 
     // Connect to the database
     await connectDB();
 
     // Find or create the chat document
-    let data = await Chat.findOne({ userId, _id: chatId });
+    let data = null;
+    if (chatId) data = await Chat.findOne({ userId, _id: chatId });
     if (!data) {
       data = new Chat({ userId, _id: chatId, messages: [] });
     }
