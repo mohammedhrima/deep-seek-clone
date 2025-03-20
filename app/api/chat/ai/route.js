@@ -1,4 +1,4 @@
-export const maxDuration = 120; //increase wait time for vercel server
+export const maxDuration = 60; //increase wait time for vercel server
 
 import { getAuth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server";
