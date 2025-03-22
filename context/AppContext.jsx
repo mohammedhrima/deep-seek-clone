@@ -16,13 +16,20 @@ function AppContextProvider({ children }) {
   const { getToken } = useAuth()
 
   const [chats, setChats] = useState([]);
-  const [selectedChat, setSelectedChat] = useState({ messages: [] });
+  const [selectedChat, setSelectedChat] = useState({ _id: "", messages: [] });
 
   const createNewChat = async () => {
     try {
-      if (!user) return NULL;
+      // console.log(user);
+
+      // if (!user) return NULL;
       const token = await getToken();
-      await axios.post("/api/chat/create", {}, { headers: { Authorization: `Bearer ${token}` } })
+      if(token)
+        await axios.post("/api/chat/create", {}, { headers: { Authorization: `Bearer ${token}` } })
+      else
+      {
+        throw Error("Auth");
+      }
       fetchUsersChats();
     } catch (error) {
       console.error("creating chat:", error.message);
@@ -62,6 +69,13 @@ function AppContextProvider({ children }) {
   }
   useEffect(() => {
     if (user) fetchUsersChats();
+    else
+    {
+      console.log("user logedout");
+      setChats([]);
+      setSelectedChat({ _id: "", messages: [] });
+    }
+    
   }, [user])
   const value = { user, chats, setChats, selectedChat, setSelectedChat, fetchUsersChats, createNewChat };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

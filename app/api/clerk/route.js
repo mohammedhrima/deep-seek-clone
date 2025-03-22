@@ -17,7 +17,7 @@ export async function POST(req) {
     const payload = await req.json();
     const body = JSON.stringify(payload);
     const { data, type } = wh.verify(body, svixHeaders);
-  
+
     // prepare data to be saved in the database
     const userData = {
       _id: data.id,
@@ -26,12 +26,14 @@ export async function POST(req) {
       image: data.image_url
     };
     await connectDB();
-  
+
     console.log(`Processing event: ${type}`);
     console.log(`User data:`, userData);
-  
+
     switch (type) {
       case "user.created":
+        console.log("create user");
+        
         await User.create(userData);
         break;
       case "user.updated":
@@ -45,7 +47,7 @@ export async function POST(req) {
         break;
     }
     // return NextRequest.json({message:"Event recieved"})
-    return NextResponse.json({message:"Event recieved"})
+    return NextResponse.json({ message: "Event received" })
   } catch (error) {
     console.error("POST /clerk", error.message)
   }

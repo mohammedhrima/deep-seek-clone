@@ -47,7 +47,7 @@ export async function POST(req) {
     console.log("/chat/ai userId", userId);
 
     // Extract chat id and prompt
-    const { chatId, prompt } = await req.json();
+    let { chatId, prompt } = await req.json();
     console.log("Sending the following prompt:", prompt);
     console.log("In this chat id:", chatId);
 
@@ -58,20 +58,19 @@ export async function POST(req) {
         message: "User not authenticated",
       });
     }
-    /*if (!prompt || !chatId) {
-      return NextResponse.json({
-        success: false,
-        message: "Prompt and chatId are required",
-      });
-    }*/
 
     // Connect to the database
     await connectDB();
 
+    // if(!chatId) throw new Error("Unxpected error chat id is NULL");
     // Find or create the chat document
     let data = null;
-    if (chatId) data = await Chat.findOne({ userId, _id: chatId });
+    if (chatId) {
+      data = await Chat.findOne({ userId, _id: chatId });
+    }
     if (!data) {
+      // If chatId is null or invalid, generate a new ObjectId
+      chatId = chatId || new mongoose.Types.ObjectId(); // Generate a new ObjectId if chatId is null
       data = new Chat({ userId, _id: chatId, messages: [] });
     }
 
@@ -85,7 +84,12 @@ export async function POST(req) {
 
     // Add AI response to chat
     const res = await sendMessage(data.messages);
-        // timestamps
+    // const res = {
+    //   role: "assitant",
+    //   content: (prompt + " ").repeat(50),
+    //   timestamps: Date.now(),
+    // }
+    // timestamps
     res.timestamps = Date.now();
     data.messages.push(res);
 
@@ -105,6 +109,7 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       data: res,
+      _id: chatId,
     });
   } catch (error) {
     console.error("catch: POST /chat/ai", error);

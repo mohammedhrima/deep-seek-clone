@@ -2,12 +2,17 @@ import { assets } from '@/assets/assets'
 import { useAppContext } from '@/context/AppContext';
 import axios from 'axios';
 import Image from 'next/image'
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast';
 
 function PromptBox({ isLoading, setIsLoading }) {
   const [prompt, setPrompt] = useState("");
   const { user, chats, setChats, selectedChat, setSelectedChat } = useAppContext();
+  const selectedId = useRef(selectedChat._id);
+
+  useEffect(() => {
+    selectedId.current = selectedChat._id;
+  }, [selectedChat]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -19,76 +24,101 @@ function PromptBox({ isLoading, setIsLoading }) {
   const sendPrompt = async (e) => {
     const promptCopy = prompt;
     try {
- 
       e.preventDefault();
       if (!user) return toast.error('Login to send message');
       if (isLoading) return toast.error('Wait for the previous prompt response');
       setIsLoading(false);
       setPrompt("");
-      const userPrompt = {
-        role: "user",
-        content: prompt,
-        timestamps: Date.now(),
-      }
-
-      // save user prompt in chats array
-      setChats((prevChats) => prevChats.map((chat) => chat._id === selectedChat._id ? {
-        ...chat,
-        messages: [...chat.messages, userPrompt]
-      } : chat))
-
-      // save user prompt in selected chats
-      setSelectedChat((prev) => ({
-        ...prev,
-        messages: [...prev.messages, userPrompt]
-      }))
 
       const { data } = await axios.post("/api/chat/ai", { chatId: selectedChat._id, prompt: prompt })
+      let startTime = Date.now();
+      setChats((prev) => {
+        const chatIndex = prev.findIndex((chat) => chat._id === selectedId.current);
+        if (chatIndex === -1) return prev;
+        // console.log("chat: ", prev[chatIndex]);
+        const updatedChat = {
+          ...prev[chatIndex],
+          messages: [
+            ...prev[chatIndex].messages,
+            {
+              role: "user",
+              content: prompt,
+              timestamps: startTime,
+            }
+          ],
+        };
+        const updatedChats = [...prev];
+        updatedChats[chatIndex] = updatedChat;
+        const [movedChat] = updatedChats.splice(chatIndex, 1);
+        updatedChats.unshift(movedChat);
+        return updatedChats;
+      });
+      
       if (data.success) {
-        console.log("recieved message fomr ai succefully", data.data);
-        
-        setChats(prevChats => prevChats.map(chat => chat._id === selectedChat._id ? { ...chat, messages: [...chat.messages, data.data] } : chat))
-
         const message = data.data.content;
-        const messageTokens = message.split(" ");
-        let assistantMessage = {
-          role: "assistant",
-          content: "",
-          timestamps: Date.now(),
-        }
+        const messageTokens = message.split(' ');
 
-        setSelectedChat(prev => ({
-          ...prev,
-          messages: [...prev.messages, assistantMessage],
-        }))
+        // update chats order in side bar
+        setChats((prev) => {
+          const chatIndex = prev.findIndex((chat) => chat._id === selectedId.current);
+          if (chatIndex === -1) return prev;
+          // console.log("chat: ", prev[chatIndex]);
+          const updatedChat = {
+            ...prev[chatIndex],
+            messages: [
+              ...prev[chatIndex].messages,
+              {
+                role: "assistant",
+                content: message,
+                timestamps: Date.now(),
+              },
+            ],
+          };
+          const updatedChats = [...prev];
+          updatedChats[chatIndex] = updatedChat;
+          const [movedChat] = updatedChats.splice(chatIndex, 1);
+          updatedChats.unshift(movedChat);
+          return updatedChats;
+        });
 
-        for (let i = 0; i < messageTokens.length; i++) {
-          setTimeout(() => {
-            assistantMessage.content = messageTokens.slice(0, i + 1).join(" ");
-            setSelectedChat(prev => {
-              const updateMessages = [
+        let delay = 1;
+        const simulateTyping = async () => {
+          for (let i = 0; i < messageTokens.length && selectedId.current == selectedChat._id; i++) {
+            await sleep(delay);
+            if (selectedId.current !== selectedChat._id) {
+              return;
+            }
+            const newContent = messageTokens.slice(0, i + 1).join(' ');
+            setSelectedChat((prev) => {
+              const updatedMessages = [
                 ...prev.messages.slice(0, -1),
-                assistantMessage
-              ]
-              return { ...prev, messages: updateMessages }
-            })
-          }, i * 100);
-
-        }
+                {
+                  role: 'assistant',
+                  content: newContent,
+                  timestamps: Date.now(),
+                },
+              ];
+              return { ...prev, messages: updatedMessages };
+            });
+          }
+        };
+        await simulateTyping();
       }
       else {
         console.error(data.message);
-        toast.error(data.message);
+        toast.error("failed to send user prompt: " + data.message);
         setPrompt(promptCopy)
       }
     } catch (error) {
       console.error(error.message);
-      if(error.message) toast.error(error.message);
+      if (error.message) toast.error(error.message);
       setPrompt(promptCopy)
     } finally {
       setIsLoading(false);
     }
   }
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   return (
     <form onSubmit={sendPrompt}
       className={`w-full ${selectedChat.messages.length > 0 ? "max-w-3xl" : "max-w-2xl"} bg-[#404045] p-4 rounded-3xl mt-4 transition-all`}>
@@ -117,3 +147,4 @@ function PromptBox({ isLoading, setIsLoading }) {
 }
 
 export default PromptBox
+
